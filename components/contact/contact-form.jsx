@@ -83,20 +83,57 @@ export function ContactForm({ t }) {
     };
   }, []);
 
+  function lockFromPosition(p) {
+    setLoc({
+      state: 'locked',
+      lat: String(p.coords.latitude),
+      lon: String(p.coords.longitude),
+      acc: String(Math.round(p.coords.accuracy || 0)),
+    });
+  }
+
+  // Error code 1 = permission denied/blocked (browser will NOT show a
+  // prompt again — the user must unblock manually). Codes 2/3 are transient.
+  function handlePositionError(err) {
+    if (err && err.code === 1) {
+      setLoc((s) => ({ ...s, state: 'blocked' }));
+    } else {
+      setLoc((s) => ({ ...s, state: 'prompt' }));
+      showToast(
+        'warn',
+        contact.locationRetryHint ?? 'Could not lock your position.',
+        contact.locationEnable ?? 'Attach my location'
+      );
+    }
+  }
+
   function enableLocation() {
     if (!('geolocation' in navigator)) return;
     setLoc((s) => ({ ...s, state: 'locating' }));
-    navigator.geolocation.getCurrentPosition(
-      (p) =>
-        setLoc({
-          state: 'locked',
-          lat: String(p.coords.latitude),
-          lon: String(p.coords.longitude),
-          acc: String(Math.round(p.coords.accuracy || 0)),
-        }),
-      () => setLoc((s) => ({ ...s, state: 'denied' })),
-      GEO_OPTS
-    );
+    navigator.geolocation.getCurrentPosition(lockFromPosition, handlePositionError, GEO_OPTS);
+  }
+
+  // Re-checks the permission state first: if still blocked we keep the
+  // unblock instructions instead of failing silently again.
+  function retryLocation() {
+    if (!('geolocation' in navigator)) return;
+    setLoc((s) => ({ ...s, state: 'locating' }));
+    const attempt = () =>
+      navigator.geolocation.getCurrentPosition(lockFromPosition, handlePositionError, GEO_OPTS);
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' })
+        .then((res) => {
+          if (res.state === 'denied') {
+            setLoc((s) => ({ ...s, state: 'blocked' }));
+          } else {
+            attempt();
+          }
+        })
+        .catch(attempt);
+    } else {
+      attempt();
+    }
   }
 
   async function onSubmit(e) {
@@ -323,7 +360,9 @@ export function ContactForm({ t }) {
               : contact.locationAttached
             : loc.state === 'locating' || loc.state === 'idle'
               ? contact.locationLocating
-              : contact.locationMissing}
+              : loc.state === 'blocked'
+                ? (contact.locationBlockedTitle ?? 'Location is blocked')
+                : contact.locationMissing}
         </span>
         {(loc.state === 'prompt' || loc.state === 'denied') && (
           <button
@@ -335,11 +374,42 @@ export function ContactForm({ t }) {
             {contact.locationEnable}
           </button>
         )}
+        {loc.state === 'blocked' && (
+          <button
+            type="button"
+            suppressHydrationWarning
+            onClick={retryLocation}
+            className="shrink-0 border-[3px] border-[#020F40] bg-[#11DFF5] px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-[#020F40] shadow-[3px_3px_0_0_#020F40] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#020F40] dark:border-[#11DFF5] dark:shadow-[3px_3px_0_0_#11DFF5]"
+          >
+            {contact.locationRetry ?? 'Retry location'}
+          </button>
+        )}
         <input type="hidden" name="placeName" value={place} readOnly />
         <input type="hidden" name="latitude" value={loc.lat} readOnly />
         <input type="hidden" name="longitude" value={loc.lon} readOnly />
         <input type="hidden" name="locationAccuracy" value={loc.acc} readOnly />
       </div>
+
+      {/* BLOCKED — the browser won't show a prompt again, so spell out the manual unblock. */}
+      {loc.state === 'blocked' && (
+        <div
+          role="alert"
+          className="border-[3px] border-[#020F40] bg-[#C6EAF4] px-4 py-3 dark:border-[#11DFF5] dark:bg-[#0B1220]"
+        >
+          <p className="break-words text-[12px] font-black uppercase tracking-[0.1em] text-[#020F40] dark:text-white">
+            {contact.locationBlockedTitle ?? 'Location is blocked'}
+          </p>
+          <p className="mt-1 break-words text-[12px] font-medium leading-relaxed text-[#020F40]/75 dark:text-white/75">
+            {contact.locationBlockedDesc ??
+              'Your browser is blocking location for this site, so no permission popup can appear. Allow it in 3 taps:'}
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-[12px] font-bold leading-relaxed text-[#020F40] dark:text-white">
+            <li>{contact.locationBlockedStep1 ?? 'Tap the tune / lock icon in the address bar'}</li>
+            <li>{contact.locationBlockedStep2 ?? 'Set Location to Allow'}</li>
+            <li>{contact.locationBlockedStep3 ?? 'Come back here and tap Retry location below'}</li>
+          </ol>
+        </div>
+      )}
 
       {status === 'error' && (
         <p role="alert" className="contact-rise border-[3px] border-[#020F40] bg-[#020F40] px-4 py-3 text-[12px] font-bold uppercase tracking-[0.08em] text-white dark:border-[#11DFF5]">

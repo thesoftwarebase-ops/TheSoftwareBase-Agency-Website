@@ -64,9 +64,17 @@ export async function POST(request) {
   } catch {
     console.log('[contact] inquiry (db unavailable)', { name, email, budget, location });
   }
-  // Email alert is best-effort — the form thinks in saves, not sends.
-  // A failed email must never fail the submission.
-  notifyOwner(inquiry).catch(() => {});
+  // Owner alert runs INSIDE the request: fire-and-forget stalls on serverless
+  // (frozen after the response) and lands minutes late. Still never fails
+  // the save — a slow/failed email only gets logged.
+  try {
+    await Promise.race([
+      notifyOwner(inquiry),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('email-timeout')), 20000)),
+    ]);
+  } catch (err) {
+    console.log('[contact] owner notify failed', err instanceof Error ? err.message : err);
+  }
   return Response.json({ ok: true });
 }
 
@@ -77,13 +85,19 @@ async function notifyOwner(q) {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const to = process.env.INQUIRY_TO_EMAIL;
-  if (!user || !pass || !to) return;
+  if (!user || !pass || !to) {
+    console.log('[contact] email disabled — SMTP_USER/SMTP_PASS/INQUIRY_TO_EMAIL missing');
+    return;
+  }
   const { default: nodemailer } = await import('nodemailer');
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
     auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
   const lines = [
     `Name: ${q.name}`,
@@ -104,4 +118,5 @@ async function notifyOwner(q) {
     subject: `New inquiry — ${q.name}${q.budget ? ` (${q.budget})` : ''}`,
     text: lines.join('\n'),
   });
+  console.log('[contact] owner notified', { to, name: q.name });
 }
