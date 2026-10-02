@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Self-hosted Space Grotesk (variable, latin) — zero runtime
+   dependency on Google Fonts, so the typeface can never fail
+   to load on a flaky network. */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk.woff2') format('woff2');
+}
+
+:root {
+  --font-grotesk: 'Space Grotesk', system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    --bg-base: theme('colors.base.light');
+    --bg-surface: theme('colors.surface.light');
+    --bg-elevated: theme('colors.elevated.light');
+    --border: theme('colors.border.light');
+    --border-strong: theme('colors.border-strong.light');
+    --text-primary: theme('colors.text.primary.light');
+    --text-secondary: theme('colors.text.secondary.light');
+    --accent-primary: theme('colors.accent.primary.light');
+    --accent-secondary: theme('colors.accent.secondary.light');
+    --accent-deep: theme('colors.accent.deep.light');
+  }
+
+  .dark {
+    --bg-base: theme('colors.base.dark');
+    --bg-surface: theme('colors.surface.dark');
+    --bg-elevated: theme('colors.elevated.dark');
+    --border: theme('colors.border.dark');
+    --border-strong: theme('colors.border-strong.dark');
+    --text-primary: theme('colors.text.primary.dark');
+    --text-secondary: theme('colors.text.secondary.dark');
+    --accent-primary: theme('colors.accent.primary.dark');
+    --accent-secondary: theme('colors.accent.secondary.dark');
+    --accent-deep: theme('colors.accent.deep.dark');
+  }
+
+  body {
+    @apply bg-[var(--bg-base)] text-[var(--text-primary)] antialiased;
+  }
+
+  .circuit-divider {
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--accent-primary),
+      var(--accent-primary) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+
+  .brutalist-border {
+    border: 3px solid var(--border-strong);
+  }
+
+  .brutalist-border-strong {
+    border: 3px solid var(--border-strong);
+  }
+
+  .brutalist-shadow {
+    box-shadow: 3px 3px 0 0 var(--border-strong);
+  }
+
+  .brutalist-shadow-lg {
+    box-shadow: 4px 4px 0 0 var(--border-strong);
+  }
+
+  .noise-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+}
