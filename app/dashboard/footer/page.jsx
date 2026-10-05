@@ -12,6 +12,9 @@ const SPEC = [
   { type: 'text', path: ['tagline'], label: 'Tagline', textarea: true },
   { type: 'text', path: ['status'], label: 'Status line' },
   { type: 'text', path: ['statusShort'], label: 'Status short' },
+  { type: 'section', label: 'MSME / Govt verified' },
+  { type: 'text', path: ['msme', 'label'], label: 'Badge label' },
+  { type: 'text', path: ['msme', 'number'], label: 'Udyam registration number' },
   { type: 'section', label: 'Link columns' },
   { type: 'text', path: ['cols', 0, 'title'], label: 'Column 1 title' },
   {
@@ -40,6 +43,17 @@ const SPEC = [
 
 export default async function DashboardFooterPage() {
   const section = await getSection('footer');
+  // Backfill lib defaults: a doc saved before a key existed (e.g. msme)
+  // would otherwise show empty fields. DB values always win when present.
+  const db = section.data && typeof section.data === 'object' ? section.data : {};
+  const dbMsme = db.msme && typeof db.msme === 'object' ? db.msme : {};
+  const dbManifesto = db.manifesto && typeof db.manifesto === 'object' ? db.manifesto : {};
+  const initial = {
+    ...footer,
+    ...db,
+    msme: { ...footer.msme, ...dbMsme },
+    manifesto: { ...footer.manifesto, ...dbManifesto },
+  };
 
   return (
     <div className="grid content-start gap-5">
@@ -53,7 +67,7 @@ export default async function DashboardFooterPage() {
       </div>
       <DocEditor
         storageKey="footer"
-        initial={section.data && typeof section.data === 'object' ? section.data : footer}
+        initial={initial}
         source={section.source}
         updatedAt={section.updatedAt}
         spec={SPEC}

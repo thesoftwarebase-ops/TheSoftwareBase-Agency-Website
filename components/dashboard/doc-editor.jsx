@@ -35,6 +35,9 @@ function setPath(obj, path, value) {
 
 export function DocEditor({ storageKey, initial, source, updatedAt, spec, note, hideNav }) {
   const [doc, setDoc] = useState(initial && typeof initial === 'object' ? initial : {});
+  // Snapshot of the last-saved state. `initial` is the first load and goes
+  // stale after a save — comparing against it kept Save enabled forever.
+  const [clean, setClean] = useState(initial && typeof initial === 'object' ? initial : {});
   const [src, setSrc] = useState(source);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
@@ -42,7 +45,7 @@ export function DocEditor({ storageKey, initial, source, updatedAt, spec, note, 
   const [base, setBase] = useState(updatedAt || null);
   const [undoing, setUndoing] = useState(false);
   const [conflict, setConflict] = useState(null);
-  const dirty = JSON.stringify(doc) !== JSON.stringify(initial);
+  const dirty = JSON.stringify(doc) !== JSON.stringify(clean);
   const ed = dashboard.editor;
 
   function setVal(path, value) {
@@ -74,6 +77,7 @@ export function DocEditor({ storageKey, initial, source, updatedAt, spec, note, 
       setConflict(null);
       setStatus('saved');
       setSrc('db');
+      setClean(doc);
       setSavedAt(json.updatedAt || new Date().toISOString());
       setBase(json.updatedAt || new Date().toISOString());
     } catch (err) {
@@ -111,6 +115,7 @@ export function DocEditor({ storageKey, initial, source, updatedAt, spec, note, 
       setConflict(null);
       setStatus('saved');
       setSrc('db');
+      setClean(doc);
       setSavedAt(json.updatedAt || new Date().toISOString());
       setBase(json.updatedAt || new Date().toISOString());
     } catch (err) {
@@ -121,7 +126,9 @@ export function DocEditor({ storageKey, initial, source, updatedAt, spec, note, 
 
   function onUseTheirs() {
     if (!conflict || conflict.data === undefined) return;
-    setDoc(conflict.data && typeof conflict.data === 'object' ? conflict.data : {});
+    const theirs = conflict.data && typeof conflict.data === 'object' ? conflict.data : {};
+    setDoc(theirs);
+    setClean(theirs);
     setBase(conflict.updatedAt || null);
     setSrc('db');
     setConflict(null);

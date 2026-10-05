@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { ShieldCheck } from 'lucide-react';
 import { site as libSite, footer as libFooter } from '@/lib/site';
 
 export function Footer({ data, brand }) {
   const footer = data && typeof data === 'object' && !Array.isArray(data) ? data : libFooter;
   const site = brand && typeof brand === 'object' && !Array.isArray(brand) ? brand : libSite;
+  // Merge so a DB doc saved before MSME existed still gets lib defaults.
+  const msmeRaw = footer.msme && typeof footer.msme === 'object' && !Array.isArray(footer.msme) ? footer.msme : {};
+  const msme = { ...libFooter.msme, ...msmeRaw };
   return (
     <footer
       className="
@@ -59,7 +63,7 @@ export function Footer({ data, brand }) {
             flex-col
             gap-8
             lg:flex-row
-            lg:items-start
+            lg:items-center
             lg:justify-between
           "
         >
@@ -149,11 +153,13 @@ export function Footer({ data, brand }) {
 
           <div
             className="
-              hidden
-              lg:flex
+              flex
               flex-col
-              items-end
-              text-right
+              items-start
+              text-left
+              gap-3
+              lg:items-end
+              lg:text-right
             "
           >
             <div
@@ -171,7 +177,6 @@ export function Footer({ data, brand }) {
 
             <div
               className="
-                mt-3
                 inline-flex
                 border-[2px]
                 border-[#020F40]
@@ -190,6 +195,56 @@ export function Footer({ data, brand }) {
             >
               {footer.shipNote || ''}
             </div>
+
+            {msme.number ? (
+              <div
+                className="
+                  inline-flex
+                  max-w-full
+                  flex-wrap
+                  items-center
+                  gap-x-2
+                  gap-y-1
+                  border-[3px]
+                  border-[#020F40]
+                  bg-white
+                  px-3
+                  py-2
+                  text-[11px]
+                  font-black
+                  tracking-[0.14em]
+                  uppercase
+                  text-[#020F40]
+                  shadow-[3px_3px_0_0_#020F40]
+                  dark:border-[#11DFF5]
+                  dark:bg-transparent
+                  dark:text-white
+                  dark:shadow-[3px_3px_0_0_#11DFF5]
+                "
+              >
+                <ShieldCheck
+                  aria-hidden
+                  className="
+                    h-4
+                    w-4
+                    shrink-0
+                    text-[#0D65EF]
+                    dark:text-[#11DFF5]
+                  "
+                />
+                <span>
+                  {msme.label}
+                </span>
+                <span
+                  className="
+                    text-[#0D65EF]
+                    dark:text-[#11DFF5]
+                  "
+                >
+                  {msme.number}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
 
